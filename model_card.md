@@ -1,111 +1,251 @@
-# 🎧 Model Card: Music Recommender Simulation
+# Model Card: VibeScore 1.0
 
-## 1. Model Name  
+## 1. Model Name
 
-Give your model a short, descriptive name.  
-Example: **VibeFinder 1.0**  
+VibeScore 1.0 — an explainable, weighted-score music recommender.
 
----
+## 2. Intended Use
 
-## 2. Intended Use  
+Suggest five songs from a small synthetic catalog for an explicit genre, mood,
+and energy preference. This is for classroom exploration of content-based
+recommendation, feature weighting, ranking, and explanation. It is not intended
+as a production music service, a diagnosis of mood, or a validated prediction of
+any real person's enjoyment. It does not learn from other listeners or train
+model parameters.
 
-Describe what your recommender is designed to do and who it is for. 
+## 3. How the Model Works
 
-Prompts:  
+Each genre match earns two points and each mood match earns one. Energy earns
+up to one point: subtract the absolute difference between a song's energy and
+the user's target from one. Sum the three contributions, score every song, and
+return the five largest totals. Each reason reports the actual matching or
+mismatching feature and its point contribution. Labels ignore case and outer
+whitespace, but `pop` and `indie pop` remain distinct.
 
-- What kind of recommendations does it generate  
-- What assumptions does it make about the user  
-- Is this for real users or classroom exploration  
+The baseline was chosen to follow the assignment's simple recipe. The required
+experiment changes genre from 2 to 1 and energy from 1 to 2, leaving mood at 1.
+This tests sensitivity, not learned optimization. Scores are rounded to 12
+decimal places for stable mathematical ties; ties preserve input order. Empty
+catalog lists return no recommendations. A file with no songs, invalid values,
+or duplicate IDs is rejected. Unknown genre/mood labels are valid but receive
+no categorical match points, so fallback results may be weak.
 
----
+## 4. Data
 
-## 3. How the Model Works  
+The catalog contains 20 fictional songs: the starter's 10 plus 10 synthetic
+additions. Genre counts are lofi 3, pop 2, and one each of rock, ambient, jazz,
+synthwave, indie pop, classical, hip-hop, rnb, folk, country, edm, reggae, soul,
+metal, and latin. Each row has an ID, title, artist, genre, mood, energy, tempo,
+valence, danceability, and acousticness. Numerical music labels are illustrative,
+not measured from real recordings. The baseline uses only genre/mood/energy;
+the other attributes remain stored and validated. There is no user interaction
+history, audio, lyrics, popularity measurement, or ground-truth enjoyment label.
+No new attribute columns were added.
 
-Explain your scoring approach in simple language.  
+## 5. Strengths
 
-Prompts:  
+The three distinct baseline profiles choose different first songs: Sunrise City
+for High-Energy Pop (3.98), Library Rain for Chill Lofi (4.00), and Storm Runner
+for Deep Intense Rock (3.99). Those results follow their stated categorical
+preferences and energy targets. Explanations make it possible to check each
+component by hand instead of accepting an opaque score.
 
-- What features of each song are used (genre, energy, mood, etc.)  
-- What user preferences are considered  
-- How does the model turn those into a score  
-- What changes did you make from the starter logic  
+**Metadata-based intuition check for Alex to review:** Sunrise City is a plausible
+first suggestion for pop/happy/0.8 because it matches both labels and has energy
+0.82. Gym Hero is second despite its intense mood because its pop match is worth
+more than the available energy or mood differences. This is a check against the
+provided labels, not a claim that Alex or Codex listened to fictional tracks or
+established real musical preference accuracy.
 
-Avoid code here. Pretend you are explaining the idea to a friend who does not program.
+## 6. Limitations and Bias
 
----
+The baseline gives genre two points, so it can prefer a badly mismatched energy
+level if the genre matches. In the conflicting classical profile, Quiet
+Constellations ranks first at 2.23 despite energy 0.18 versus a target of 0.95.
+Lofi has three catalog entries while classical has only one, giving some users
+more matching choices. Exact category matching treats `pop` and `indie pop` as
+unrelated and `intense` and `aggressive` as unrelated. These design and coverage
+choices can reinforce a narrow set of suggestions rather than discover music
+across related genres.
 
-## 4. Data  
+The tail of every top-five list is not necessarily a strong match: the rock list
+includes unrelated genres because there is only one exact rock entry. Rankings
+are relative to available candidates; low-scoring candidates are not a claim of
+positive enjoyment. No diversity/fairness penalty or confidence threshold was
+added, because those would change the agreed baseline scope.
 
-Describe the dataset the model uses.  
+## 7. Evaluation
 
-Prompts:  
+Executed `python -m src.main`, `python -m src.evaluate`, and `python -m pytest -q`.
+The three required preference dictionaries are in `src/main.py`. The evaluation
+adds Conflicting Classical (classical, melancholic, energy 0.95) to test an
+incompatible combination given this catalog. All output below was generated by
+the actual implementation; it is not hypothetical output.
 
-- How many songs are in the catalog  
-- What genres or moods are represented  
-- Did you add or remove data  
-- Are there parts of musical taste missing in the dataset  
+### Actual profile and experiment outputs
 
----
+```text
+Loaded songs: 20
 
-## 5. Strengths  
+BASELINE: genre=2.0, mood=1.0, energy=1.0
 
-Where does your system seem to work well  
+Profile: High-Energy Pop
+Preferences: genre=pop, mood=happy, energy=0.80
+1. Sunrise City — Neon Echo | Score: 3.98
+   Because: genre match (+2.00); mood match (+1.00); energy 0.82 vs target 0.80: gap 0.02 (+0.98)
+2. Gym Hero — Max Pulse | Score: 2.87
+   Because: genre match (+2.00); mood mismatch (+0.00); energy 0.93 vs target 0.80: gap 0.13 (+0.87)
+3. Rooftop Lights — Indigo Parade | Score: 1.96
+   Because: genre mismatch (+0.00); mood match (+1.00); energy 0.76 vs target 0.80: gap 0.04 (+0.96)
+4. Plaza at Sunset — Sol de Abril | Score: 0.99
+   Because: genre mismatch (+0.00); mood mismatch (+0.00); energy 0.81 vs target 0.80: gap 0.01 (+0.99)
+5. Sidewalk Confidence — Copper Verse | Score: 0.98
+   Because: genre mismatch (+0.00); mood mismatch (+0.00); energy 0.78 vs target 0.80: gap 0.02 (+0.98)
 
-Prompts:  
+Profile: Chill Lofi
+Preferences: genre=lofi, mood=chill, energy=0.35
+1. Library Rain — Paper Lanterns | Score: 4.00
+   Because: genre match (+2.00); mood match (+1.00); energy 0.35 vs target 0.35: gap 0.00 (+1.00)
+2. Midnight Coding — LoRoom | Score: 3.93
+   Because: genre match (+2.00); mood match (+1.00); energy 0.42 vs target 0.35: gap 0.07 (+0.93)
+3. Focus Flow — LoRoom | Score: 2.95
+   Because: genre match (+2.00); mood mismatch (+0.00); energy 0.40 vs target 0.35: gap 0.05 (+0.95)
+4. Spacewalk Thoughts — Orbit Bloom | Score: 1.93
+   Because: genre mismatch (+0.00); mood match (+1.00); energy 0.28 vs target 0.35: gap 0.07 (+0.93)
+5. Coffee Shop Stories — Slow Stereo | Score: 0.98
+   Because: genre mismatch (+0.00); mood mismatch (+0.00); energy 0.37 vs target 0.35: gap 0.02 (+0.98)
 
-- User types for which it gives reasonable results  
-- Any patterns you think your scoring captures correctly  
-- Cases where the recommendations matched your intuition  
+Profile: Deep Intense Rock
+Preferences: genre=rock, mood=intense, energy=0.90
+1. Storm Runner — Voltline | Score: 3.99
+   Because: genre match (+2.00); mood match (+1.00); energy 0.91 vs target 0.90: gap 0.01 (+0.99)
+2. Gym Hero — Max Pulse | Score: 1.97
+   Because: genre mismatch (+0.00); mood match (+1.00); energy 0.93 vs target 0.90: gap 0.03 (+0.97)
+3. Electric Horizon — Prism Current | Score: 0.94
+   Because: genre mismatch (+0.00); mood mismatch (+0.00); energy 0.96 vs target 0.90: gap 0.06 (+0.94)
+4. Sunrise City — Neon Echo | Score: 0.92
+   Because: genre mismatch (+0.00); mood mismatch (+0.00); energy 0.82 vs target 0.90: gap 0.08 (+0.92)
+5. Iron Signal — Black Meridian | Score: 0.92
+   Because: genre mismatch (+0.00); mood mismatch (+0.00); energy 0.98 vs target 0.90: gap 0.08 (+0.92)
 
----
+Profile: Conflicting Classical
+Preferences: genre=classical, mood=melancholic, energy=0.95
+1. Quiet Constellations — Mira Vale | Score: 2.23
+   Because: genre match (+2.00); mood mismatch (+0.00); energy 0.18 vs target 0.95: gap 0.77 (+0.23)
+2. After the Last Train — Velvet Hours | Score: 1.37
+   Because: genre mismatch (+0.00); mood match (+1.00); energy 0.32 vs target 0.95: gap 0.63 (+0.37)
+3. Electric Horizon — Prism Current | Score: 0.99
+   Because: genre mismatch (+0.00); mood mismatch (+0.00); energy 0.96 vs target 0.95: gap 0.01 (+0.99)
+4. Gym Hero — Max Pulse | Score: 0.98
+   Because: genre mismatch (+0.00); mood mismatch (+0.00); energy 0.93 vs target 0.95: gap 0.02 (+0.98)
+5. Iron Signal — Black Meridian | Score: 0.97
+   Because: genre mismatch (+0.00); mood mismatch (+0.00); energy 0.98 vs target 0.95: gap 0.03 (+0.97)
 
-## 6. Limitations and Bias 
+SENSITIVITY EXPERIMENT: halve genre and double energy
+genre=1.0, mood=1.0, energy=2.0
 
-Where the system struggles or behaves unfairly. 
+Profile: High-Energy Pop (experiment)
+Preferences: genre=pop, mood=happy, energy=0.80
+1. Sunrise City — Neon Echo | Score: 3.96
+   Because: genre match (+1.00); mood match (+1.00); energy 0.82 vs target 0.80: gap 0.02 (+1.96)
+2. Rooftop Lights — Indigo Parade | Score: 2.92
+   Because: genre mismatch (+0.00); mood match (+1.00); energy 0.76 vs target 0.80: gap 0.04 (+1.92)
+3. Gym Hero — Max Pulse | Score: 2.74
+   Because: genre match (+1.00); mood mismatch (+0.00); energy 0.93 vs target 0.80: gap 0.13 (+1.74)
+4. Plaza at Sunset — Sol de Abril | Score: 1.98
+   Because: genre mismatch (+0.00); mood mismatch (+0.00); energy 0.81 vs target 0.80: gap 0.01 (+1.98)
+5. Sidewalk Confidence — Copper Verse | Score: 1.96
+   Because: genre mismatch (+0.00); mood mismatch (+0.00); energy 0.78 vs target 0.80: gap 0.02 (+1.96)
 
-Prompts:  
+Before top 3: Sunrise City, Gym Hero, Rooftop Lights
+After top 3: Sunrise City, Rooftop Lights, Gym Hero
+```
 
-- Features it does not consider  
-- Genres or moods that are underrepresented  
-- Cases where the system overfits to one preference  
-- Ways the scoring might unintentionally favor some users  
+### Pairwise comparisons of the three required profiles
 
----
+- **Pop versus lofi:** Sunrise City (3.98) changes to Library Rain (4.00). Pop/happy
+  rewards Sunrise City's two label matches, while lofi/chill rewards Library
+  Rain's label matches and exact 0.35 energy. Their top-five lists share no songs.
+- **Pop versus rock:** Sunrise City changes to Storm Runner (3.99). Gym Hero is
+  second for both but for different reasons: it matches pop genre in the first
+  case and intense mood in the second. The overlap does not mean the profiles
+  are being ignored; the explanations expose distinct contributions.
+- **Lofi versus rock:** Library Rain changes to Storm Runner and their top-five
+  lists do not overlap. Energy targets shift from 0.35 to 0.90 while both
+  categorical preferences change, so this comparison exercises multiple features.
 
-## 7. Evaluation  
+### Adversarial profile comparisons
 
-How you checked whether the recommender behaved as expected. 
+- **Classical versus pop:** the preferred genre changes the winner from Sunrise
+  City to Quiet Constellations, even though the latter's energy is far from the
+  classical profile's target. Gym Hero remains in both lists as an energy match.
+- **Classical versus lofi:** both winners have low energy, but for different
+  reasons: Library Rain fits the low-energy lofi profile, whereas the classical
+  winner contradicts the high-energy target and wins mainly on genre. Their
+  top-five lists do not overlap.
+- **Classical versus rock:** the rock profile has a near-perfect matching song;
+  the classical profile has no song matching all its preferences. Electric
+  Horizon, Gym Hero, and Iron Signal appear in both lists through energy or mood
+  contributions, while the category bonus determines different winners.
 
-Prompts:  
+### Sensitivity experiment and interpretation
 
-- Which user profiles you tested  
-- What you looked for in the recommendations  
-- What surprised you  
-- Any simple tests or comparisons you ran  
+Halving genre weight and doubling energy weight swaps the second and third pop
+recommendations: Rooftop Lights rises from 1.96 to 2.92 and Gym Hero changes from
+2.87 to 2.74. Rooftop Lights has the happy mood and energy 0.76, close to the 0.80
+target; Gym Hero has the pop genre but an intense mood and energy 0.93. The
+experiment therefore does what its math predicts. It might better fit a listener
+who values mood/energy over exact genre, but without listener feedback it is
+**different**, not demonstrated to be more accurate. Baseline scores and altered
+scores have different weighting and should not be treated as probabilities.
 
-No need for numeric metrics unless you created some.
+### Verification
 
----
+52 pytest cases pass locally, including the two original starter tests. Added
+cases test real scoring values, reversed input order, tied scores, input
+immutability, different profiles, CSV validation, invalid user values, empty
+catalogs, top-k behavior, class/function consistency, the weight change, and CLI
+execution. The original tests alone could pass placeholders, so they are not
+used as sufficient evidence. CI also compares fresh CLI/evaluation output with
+committed text reports on Python 3.11 and 3.12. This is implementation verification,
+not an estimate of real-world recommendation accuracy.
 
-## 8. Future Work  
+## 8. Future Work
 
-Ideas for how you would improve the model next.  
+1. Collect actual listener judgments and tune weights against a separate
+   evaluation set instead of assuming a larger score means better taste fit.
+2. Expand underrepresented genres and represent related genres/moods more
+   carefully, with explicit decisions about what similarity should mean.
+3. Explore contextual preferences or variety only after the baseline is reviewed.
 
-Prompts:  
+These are ideas, not implemented optional extensions. There are no added song
+attributes, selectable ranking strategies, artist penalties, or output tables.
 
-- Additional features or preferences  
-- Better ways to explain recommendations  
-- Improving diversity among the top results  
-- Handling more complex user tastes  
+## 9. Engineering and Personal Reflection — Draft for Alex's Review
 
----
+This reflection summarizes the actual AI-assisted build; Alex should revise it
+into his own account after inspecting the project. It does not claim he wrote
+the code independently or personally performed the experiments.
 
-## 9. Personal Reflection  
+**Biggest learning point:** A ranking is a consequence of both data coverage and
+weight choices. The classical edge case shows why a valid, explained algorithm
+can still return an unconvincing recommendation when the available catalog cannot
+satisfy the requested preferences.
 
-A few sentences about your experience.  
+**How AI helped and what needed checking:** Codex implemented the initial draft,
+created regression tests, and ran the profile experiment. Inspection found two
+starter inconsistencies: an import incompatible with the requested module command,
+and separate class/functional interfaces. The implementation uses one scoring
+rule for both. The weak starter tests were retained but supplemented with exact
+scores, shuffled inputs, and explicit explanation checks. Numerical ties also
+needed machine-scale rounding to avoid arbitrary floating-point ordering.
 
-Prompts:  
+**Why a simple algorithm can resemble recommendations:** Changing the explicit
+preferences changes the winning tracks in an understandable way. That creates
+personalization without model training. It does not establish that a real user
+would enjoy the output, particularly because these tracks are fictional.
 
-- What you learned about recommender systems  
-- Something unexpected or interesting you discovered  
-- How this changed the way you think about music recommendation apps  
+**What to try next:** After Alex checks whether the metadata-based examples match
+his own expectations, a useful next step would be collecting a few preference
+judgments and deciding whether genre should dominate mood and energy. The current
+build deliberately stops at the required features.

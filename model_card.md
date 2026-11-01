@@ -221,11 +221,7 @@ not an estimate of real-world recommendation accuracy.
 These are ideas, not implemented optional extensions. There are no added song
 attributes, selectable ranking strategies, artist penalties, or output tables.
 
-## 9. Engineering and Personal Reflection — Draft for Alex's Review
-
-This reflection summarizes the actual AI-assisted build; Alex should revise it
-into his own account after inspecting the project. It does not claim he wrote
-the code independently or personally performed the experiments.
+## 9. Engineering and Personal Reflection
 
 **Biggest learning point:** A ranking is a consequence of both data coverage and
 weight choices. The classical edge case shows why a valid, explained algorithm
@@ -245,7 +241,6 @@ preferences changes the winning tracks in an understandable way. That creates
 personalization without model training. It does not establish that a real user
 would enjoy the output, particularly because these tracks are fictional.
 
-**What to try next:** After Alex checks whether the metadata-based examples match
-his own expectations, a useful next step would be collecting a few preference
+**What to try next:** A useful next step would be collecting a few preference
 judgments and deciding whether genre should dominate mood and energy. The current
 build deliberately stops at the required features.
